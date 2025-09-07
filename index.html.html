@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Key Pin Login → Message</title>
+  <style>
+    :root{
+      --bg:#071026;
+      --card:#0b1530;
+      --accent:#ff6b6b;
+      --muted:#9fb;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Noto Sans',sans-serif;background:linear-gradient(180deg,#041022,#071026);color:#fff}
+    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{width:360px;background:var(--card);border-radius:20px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,0.6);position:relative;z-index:2;transition:all 520ms ease}
+    .card.hidden{opacity:0;transform:translateY(-12px) scale(0.98);pointer-events:none}
+    .title{display:flex;gap:12px;align-items:center;margin-bottom:16px}
+    .key-ico{width:60px;height:60px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#ffa3a3);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(255,107,107,0.3)}
+    h1{font-size:20px;margin:0}
+    p.desc{margin:6px 0 20px;color:#ccd;font-size:14px}
+
+    .pin-display{height:80px;background:#111;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:20px;padding:10px 16px;font-size:32px;letter-spacing:16px;border:2px solid var(--accent);box-shadow:inset 0 0 12px rgba(255,107,107,0.5),0 0 18px rgba(255,107,107,0.3)}
+    .dot{width:22px;height:22px;border-radius:50%;background:#333;border:2px solid #666;box-shadow:inset 0 -2px 4px rgba(0,0,0,0.5);transition:all 180ms ease}
+    .dot.filled{background:var(--accent);border:2px solid #fff;box-shadow:0 0 10px var(--accent),0 0 20px rgba(255,107,107,0.7);transform:scale(1.1)}
+
+    .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+    .btn{padding:16px;border-radius:12px;background:#1a1a2e;border:2px solid #333;text-align:center;font-size:20px;cursor:pointer;user-select:none;color:#fff;font-weight:bold;transition:all 0.2s}
+    .btn:hover{background:#222;border-color:var(--accent);box-shadow:0 0 10px rgba(255,107,107,0.4)}
+    .btn:active{transform:scale(0.95)}
+    .btn.action{background:var(--accent);border:2px solid #fff;color:#fff}
+    .hint{margin-top:12px;font-size:14px;color:#9fb;text-align:center}
+
+    .stage{position:fixed;inset:0;background:linear-gradient(180deg,#020617,#071026);display:flex;align-items:center;justify-content:center;visibility:hidden;opacity:0;transition:opacity 560ms ease, visibility 560ms;z-index:1}
+    .stage.visible{visibility:visible;opacity:1;z-index:5}
+    .backBtn{position:fixed;left:18px;top:18px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.04);color:#dfe;cursor:pointer;z-index:6}
+
+    .centerText{font-size:72px;font-weight:bold;color:#fff;text-align:center;text-shadow:0 0 20px rgba(255,255,255,0.8),0 0 40px rgba(255,107,107,0.6);}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="card">
+      <div class="title">
+        <div class="key-ico">🔑</div>
+        <div>
+          <h1>Enter PIN</h1>
+          <p class="desc">ใส่รหัสเพื่อเข้าสู่ระบบ</p>
+        </div>
+      </div>
+
+      <div class="pin-display" id="pinDisplay">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+
+      <div class="keypad">
+        <div class="btn">1</div>
+        <div class="btn">2</div>
+        <div class="btn">3</div>
+        <div class="btn">4</div>
+        <div class="btn">5</div>
+        <div class="btn">6</div>
+        <div class="btn">7</div>
+        <div class="btn">8</div>
+        <div class="btn">9</div>
+        <div class="btn action" id="clear">C</div>
+        <div class="btn">0</div>
+        <div class="btn action" id="enter">OK</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <button class="backBtn" id="backBtn">‹ Back</button>
+    <div class="centerText">I Miss You</div>
+  </div>
+
+  <script>
+    const CORRECT_PIN = "1906";
+    let input = "";
+    const dots = [...document.querySelectorAll('.dot')];
+    const pinDisplay = document.getElementById('pinDisplay');
+    const card = document.getElementById('card');
+    const stage = document.getElementById('stage');
+    const backBtn = document.getElementById('backBtn');
+
+    function updateDots(){
+      dots.forEach((d,i)=>{
+        if(i < input.length){d.classList.add('filled');} else {d.classList.remove('filled');}
+      });
+    }
+
+    function clearInput(){
+      input="";
+      updateDots();
+    }
+
+    function checkPin(){
+      if(input===CORRECT_PIN){
+        goToStage();
+      } else {
+        pinDisplay.style.borderColor = "red";
+        setTimeout(()=>{pinDisplay.style.borderColor = "var(--accent)";},600);
+        clearInput();
+      }
+    }
+
+    document.querySelectorAll('.btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const val=btn.innerText;
+        if(!isNaN(val)){
+          if(input.length<4){input+=val;updateDots();}
+        } else if(val==="C"){clearInput();}
+        else if(val==="OK"){checkPin();}
+      });
+    });
+
+    window.addEventListener('keydown', e => {
+      if(e.key === 'Backspace') { clearInput(); return; }
+      if(e.key === 'Enter') { checkPin(); return; }
+      if(e.key >= '0' && e.key <= '9'){
+        if(input.length<4){ input += e.key; updateDots(); }
+      }
+    });
+
+    backBtn.addEventListener('click', ()=>{
+      hideStage();
+    });
+
+    function goToStage(){
+      card.classList.add('hidden');
+      stage.classList.add('visible');
+    }
+    function hideStage(){
+      stage.classList.remove('visible');
+      card.classList.remove('hidden');
+      clearInput();
+    }
+  </script>
+</body>
+</html>
